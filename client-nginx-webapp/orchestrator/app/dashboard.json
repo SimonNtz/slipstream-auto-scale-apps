@@ -1,0 +1,93 @@
+{
+  "server": "<riemann-host>:5556",
+  "server_type": "ws",
+  "workspaces": [
+    {
+      "name": "<comp-name> metrics",
+      "view": {
+        "type": "Balloon",
+        "weight": 1,
+        "id": "5a1032a348ea71a534abcef58c786c0e449c3d60",
+        "version": 43,
+        "child": {
+          "type": "VStack",
+          "weight": 1,
+          "id": "3b342977ffcc3acc04eceeecc507d8ea0696f34b",
+          "version": 43,
+          "children": [
+            {
+              "type": "Flot",
+              "weight": 1,
+              "id": "798533e4b9bcdc2b972a58e34ab6539e55477209",
+              "version": 9,
+              "title": "<comp-name> - avg_response_time",
+              "query": "service =~ \"avg_response_time\" and tagged \"<comp-name>\"",
+              "min": null,
+              "max": null,
+              "timeRange": 1800,
+              "graphType": "line",
+              "stackMode": "false"
+            },
+            {
+              "type": "Flot",
+              "weight": 1,
+              "id": "5fdbfac306e82aafbb4115ba2dbad7c456a60ba0",
+              "version": 37,
+              "title": "<comp-name> - multiplicity",
+              "query": "service =~ \"<comp-name>-mult\"",
+              "min": null,
+              "max": null,
+              "timeRange": 1800,
+              "graphType": "line",
+              "stackMode": "true"
+            },
+            {
+              "type": "Flot",
+              "weight": 1,
+              "id": "f5a23f7f827dd39dff412e78c74c81101e699a60",
+              "version": 2,
+              "title": "<comp-name> - count",
+              "query": "service =~ \"<comp-name>-count\"",
+              "min": null,
+              "max": null,
+              "timeRange": 1800,
+              "graphType": "line",
+              "stackMode": "true"
+            },
+            {
+              "type": "HStack",
+              "weight": 0.5,
+              "id": "308714d690c0a8652583af65c90847942e405b5d",
+              "version": 11,
+              "children": [
+                {
+                  "type": "Dial",
+                  "weight": 1,
+                  "id": "aa4e362d027a77fa9c6fbdb5a3263c813ed2a6b4",
+                  "version": 17,
+                  "title": "<comp-name> - multiplicity",
+                  "query": "service = \"<comp-name>-mult\"",
+                  "max": "4"
+                },
+                {
+                  "type": "Grid",
+                  "weight": 1,
+                  "id": "33dba2433176699c6a2dca24d0ce077028fbbc42",
+                  "version": 15,
+                  "title": "<comp-name> - load",
+                  "query": "service =~ \"load/load/%\"",
+                  "max": "",
+                  "rows": "service",
+                  "cols": "host",
+                  "row_sort": "lexical",
+                  "col_sort": "lexical"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "45fe60d6ed50bf5b1d170d915c3f0d99ffb97764"
+    }
+  ]
+}
