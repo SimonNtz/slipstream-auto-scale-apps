@@ -38,9 +38,21 @@ deploy_and_run_riemann_client() {
     ~/locust-riemann-sender.py $riemann_host:$riemann_port &
 }
 
+deploy_landing_web_page() {
+    yum install -y httpd
+    rm -rf /var/www/html/index.html
+    curl -sSf -o /var/www/html/index.html $source_location/index.html
+    sed -i -e "s|locust_url|http://${hostname}:8089|" \
+           -e "s|riemann_dashboard_url|http://${riemann_host}:6006|" \
+           -e "s|webapp_url|http://${webapp_ip}/load|" \
+           /var/www/html/index.html
+    systemctl start httpd
+}
+
 deploy_httpclient
 run_httpclient
 deploy_and_run_riemann_client
+deploy_landing_web_page
 
 hostname=`ss-get hostname`
 url="http://${hostname}:8089"
