@@ -20,6 +20,11 @@ ORCH_LOCK_FILE=~/orchestrator-deployment-target.lock
 [ -f $ORCH_LOCK_FILE ] && { echo "Orchestrator deployment lock file exists. Exiting!.."; exit 0; }
 
 # $riemann_conf_url should be set in the wrapper SS script.
+# URL of the root of the Riemann configuration.
+# The following files are assumed under the URL:
+#  riemann-ss-streams.clj - Riemann streams using SlipStream scale up/down actions,
+#  dashboard.rb - Riemann dashboard configuration,
+#  dashboard.json - Riemann dashboard layout and queries.
 [ -z "$riemann_conf_url" ] && { echo "Required \$riemann_conf_url environment variable is not set."; exit 1; } || true
 
 hostname=`ss-get hostname`
