@@ -12,6 +12,8 @@ riemann_port=5555
 
 webapp_ip=`ss-get nginx.1:hostname`
 
+hostname=`ss-get hostname`
+
 deploy_httpclient() {
     yum install -y python-pip python-devel gcc zeromq-devel
     pip install --upgrade pip
@@ -54,7 +56,6 @@ run_httpclient
 deploy_and_run_riemann_client
 deploy_landing_web_page
 
-hostname=`ss-get hostname`
 url="http://${hostname}"
 ss-set url.service $url
 ss-display "Load generator: $url:8089"
