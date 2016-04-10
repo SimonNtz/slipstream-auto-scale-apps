@@ -57,5 +57,7 @@ deploy_and_run_riemann_client
 deploy_landing_web_page
 
 url="http://${hostname}"
+ss-set ss:url.service $url
 ss-set url.service $url
 ss-display "Load generator: $url:8089"
+
