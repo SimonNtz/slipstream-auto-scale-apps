@@ -12,15 +12,15 @@
 set -e
 set -x
 
-# $source_root should be set in the wrapper SS script.
-source_location=${source_root}/orchestrator/app
-
 #
 # NB! The target gets run always on Executing state.
 # We want to avoid being run each time when scaling action is called.
 ORCH_LOCK_FILE=~/orchestrator-deployment-target.lock
 
 [ -f $ORCH_LOCK_FILE ] && { echo "Orchestrator deployment lock file exists. Exiting!.."; exit 0; }
+
+# $riemann_conf_url should be set in the wrapper SS script.
+[ -z "$riemann_conf_url" ] && { echo "Required \$riemann_conf_url environment variable is not set."; exit 1; } || true
 
 hostname=`ss-get hostname`
 
@@ -69,7 +69,7 @@ deploy_riemann_ubuntu() {
     dpkg -i riemann_${RIEMANN_VER_DEB}.deb
 
     riemann_ss_conf=/etc/riemann/riemann-ss-streams.clj
-    curl -sSf -o $riemann_ss_conf $source_location/riemann-ss-streams.clj
+    curl -sSf -o $riemann_ss_conf $riemann_conf_url/riemann-ss-streams.clj
 
     # Download SS Clojure client.
     ss_endpoint=$(awk -F= '/serviceurl/ {gsub(/^[ \t]+|[ \t]+$)/, "", $2); print $2}' \
@@ -94,8 +94,8 @@ EOF
 }
 start_riemann_dash() {
     cd /etc/riemann/
-    wget $source_location/dashboard.rb
-    wget $source_location/dashboard.json
+    wget $riemann_conf_url/dashboard.rb
+    wget $riemann_conf_url/dashboard.json
     sed -i -e "s/<riemann-host>/$hostname/" /etc/riemann/dashboard.json
     sed -i -e 's/<comp-name>/webapp/g' /etc/riemann/dashboard.json
     riemann-dash dashboard.rb &
