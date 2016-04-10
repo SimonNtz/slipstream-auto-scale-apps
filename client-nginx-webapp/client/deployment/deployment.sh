@@ -43,6 +43,7 @@ deploy_and_run_riemann_client() {
 deploy_landing_web_page() {
     yum install -y httpd
     rm -rf /var/www/html/index.html
+    curl -sSf -o /var/www/html/scalable-app-in-SS.png $source_location/scalable-app-in-SS.png
     curl -sSf -o /var/www/html/index.html $source_location/index.html
     sed -i -e "s|locust_url|http://${hostname}:8089|" \
            -e "s|riemann_dashboard_url|http://${riemann_host}:6006|" \
