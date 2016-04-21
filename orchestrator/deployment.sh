@@ -31,8 +31,8 @@ hostname=`ss-get hostname`
 
 cat /etc/*-release*
 
-RIEMANN_VER_RHEL=0.2.10-1
-RIEMANN_VER_DEB=0.2.10_all
+RIEMANN_VER_RHEL=0.2.11-1
+RIEMANN_VER_DEB=0.2.11_all
 
 riemann_dashboard_port=
 
