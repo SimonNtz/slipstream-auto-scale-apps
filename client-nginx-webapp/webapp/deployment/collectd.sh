@@ -61,7 +61,7 @@ LoadPlugin write_riemann
     <Node "local">
         Host "$riemann_host"
         Port "$riemann_port"
-        Protocol TCP
+        Protocol UDP
         StoreRates true
         AlwaysAppendDS false
     </Node>
