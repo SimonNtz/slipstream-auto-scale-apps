@@ -68,6 +68,11 @@ deploy_riemann_ubuntu() {
     # Ubuntu 14
     apt-get install -y ruby ruby-dev zlib1g-dev openjdk-7-jre build-essential
 
+    # need Ruby ~> 2.0 for json
+    apt-add-repository -y ppa:brightbox/ruby-ng
+    apt-get update -y
+    apt-get install -y ruby2.3
+
     gem install --no-ri --no-rdoc riemann-client riemann-tools riemann-dash
 
     curl -O https://aphyr.com/riemann/riemann_${RIEMANN_VER_DEB}.deb
