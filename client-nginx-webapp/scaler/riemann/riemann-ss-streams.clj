@@ -24,7 +24,10 @@
 ; Using core.async due to synchrnonous model of event processing in Riemann.
 ; http://riemann.io/howto.html#client-backpressure-latency-and-queues
 (require '[clojure.core.async :refer [go timeout chan sliding-buffer <! >! alts!]])
-(require '[com.sixsq.slipstream.clj-client.run :as ss-r])
+(require '[sixsq.slipstream.client.api.run :as ss-r])
+; silence kvlt logs.
+(require '[taoensso.timbre :as tlog])
+(tlog/merge-config! {:ns-blacklist ["kvlt.*"]})
 
 ;; Application elasticity constraints.
 ;; TODO: Read from .edn
@@ -106,7 +109,7 @@
 
 (defn scale-failure?
   [scale-res]
-  (not= (:state scale-res) ss-r/action-success))
+  (false? (ss-r/action-success? scale-res)))
 
 (defn can-scale?
   []
@@ -150,6 +153,8 @@
           (log-skip-scale-request))
         (info "Sleeping in scale request processor loop for 5 sec.")
         (sleep 5)))))
+
+(ss-r/contextualize!)
 
 (defonce ^:dynamic *scalers-executor* (scalers scale-chan))
 
