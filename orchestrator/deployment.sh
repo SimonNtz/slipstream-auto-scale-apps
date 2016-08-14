@@ -65,6 +65,13 @@ deploy_riemann_rhel() {
     service riemann start
 }
 deploy_riemann_ubuntu() {
+
+    # need Java 8 for promesa's java deps.
+    add-apt-repository -y ppa:openjdk-r/ppa
+    apt-get update -y
+    apt-get install -y openjdk-8-jdk
+    update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
+
     # Ubuntu 14
     apt-get install -y ruby ruby-dev zlib1g-dev openjdk-7-jre build-essential
 
