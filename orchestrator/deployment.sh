@@ -105,9 +105,12 @@ EOF
        's|JAR="/usr/share/riemann/riemann.jar:$EXTRA_CLASSPATH"|JAR="$EXTRA_CLASSPATH:/usr/share/riemann/riemann.jar"|' \
        /usr/bin/riemann
 
+    # Fix for http://stackoverflow.com/questions/6784463/error-trustanchors-parameter-must-be-non-empty
+    # on Ubuntu.
+    sudo /var/lib/dpkg/info/ca-certificates-java.postinst configure
+
     /etc/init.d/riemann stop || true
     /etc/init.d/riemann start
-    #chkconfig riemann on
 }
 start_riemann_dash() {
     cd /etc/riemann/
