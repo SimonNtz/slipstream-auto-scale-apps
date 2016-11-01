@@ -42,6 +42,16 @@ _configure_selinux() {
     [ -f /etc/selinux/config ] && sed -i -e 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config || true
 }
 
+_disable_ipv6() {
+    cat > /etc/sysctl.conf <<EOF
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+EOF
+    sudo sysctl -p
+    cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+}
+
 deploy_ntpd_rhel() {
     yum install -y ntp
     service ntpd start
@@ -145,6 +155,7 @@ deploy_graphite_rhel() {
 }
 
 _configure_selinux
+_disable_ipv6
 ss-display "Deploying ntpd"
 deploy_ntpd_ubuntu
 #deploy_ntpd_rhel

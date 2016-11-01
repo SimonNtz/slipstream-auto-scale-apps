@@ -24,10 +24,9 @@
 ; Using core.async due to synchrnonous model of event processing in Riemann.
 ; http://riemann.io/howto.html#client-backpressure-latency-and-queues
 (require '[clojure.core.async :refer [go timeout chan sliding-buffer <! >! alts!]])
-(require '[sixsq.slipstream.client.api.run :as ss-r])
-; silence kvlt logs.
-(require '[taoensso.timbre :as tlog])
-(tlog/merge-config! {:ns-blacklist ["kvlt.*"]})
+(require '[sixsq.slipstream.runproxy.api :as ssrp])
+
+(ssrp/set-ss-proxy "http://localhost:8008")
 
 ;; Application elasticity constraints.
 ;; TODO: Read from .edn
@@ -107,20 +106,6 @@
         "Run is not in scalable state."
         "Request is not taken from the queue."))
 
-(defn scale-failure?
-  [scale-res]
-  (false? (ss-r/action-success? scale-res)))
-
-(defn can-scale?
-  []
-  (ss-r/can-scale?))
-
-(defn scale-action
-  [chan action comp-name n timeout]
-  (cond
-    (= :up action) (go (>! chan (ss-r/action-scale-up comp-name n :timeout timeout)))
-    (= :down action) (go (>! chan (ss-r/action-scale-down-by comp-name n :timeout timeout)))))
-
 (defn scale!
   [action comp-name n]
   (let [ch (chan 1) start-ts (System/currentTimeMillis)]
@@ -130,9 +115,9 @@
         (free!)
         (cond
           (nil? scale-res) (log-scaler-timout action comp-name n elapsed)
-          (scale-failure? scale-res) (log-scaling-failure action comp-name n elapsed scale-res)
+          (ssrp/scale-failure? scale-res) (log-scaling-failure action comp-name n elapsed scale-res)
           :else (log-scaling-success action comp-name n elapsed scale-res))))
-    (scale-action ch action comp-name n timeout-scale)))
+    (ssrp/scale-action ch action comp-name n timeout-scale)))
 
 (defn scalers
   [chan]
@@ -143,7 +128,7 @@
   (doseq [_ (range number-of-scalers)]
     (go
       (while true
-        (if (can-scale?)
+        (if (ssrp/can-scale?)
           (let [[[action comp-name n] _] (alts! [chan (timeout timeout-processing-loop)])]
             (when (not-nil? action)
               (try
@@ -153,8 +138,6 @@
           (log-skip-scale-request))
         (info "Sleeping in scale request processor loop for 5 sec.")
         (sleep 5)))))
-
-(ss-r/contextualize!)
 
 (defonce ^:dynamic *scalers-executor* (scalers scale-chan))
 
@@ -168,7 +151,7 @@
     (= true @busy?) (log-scaler-busy action comp-name n)))
 
 (defn event-mult
-  [mult]
+  [comp-name mult vms-max]
   (event {
           :service     (str comp-name "-mult")
           :host        (str comp-name ".mult")
@@ -180,12 +163,27 @@
           :ttl         30
           :metric      mult}))
 
+(defn get-comp-multiplicity
+  [comp-name]
+  ; TODO: look for the multiplicity in the index.  It should be put there by a separate stream.
+  ; (riemann.index/lookup (:index @riemann.config/core) comp-name".mult" comp-name"-mult")
+  (ssrp/get-multiplicity comp-name))
+
+(defn scale-up?
+  [mean]
+  (and (>= mean metric-thold-up) (< (get-comp-multiplicity comp-name) vms-max)))
+
+(defn scale-down?
+  [mean]
+  (and (< mean metric-thold-down) (> (get-comp-multiplicity comp-name) vms-min)))
+
+;; Multiplicity indexing stream.
 ;; Get multiplicity of the component instances, index it and send to graphite.
 (let [index (default :ttl 20 (index))]
-  (riemann.time/every! 10 (fn [] (let [mult (ss-r/get-multiplicity comp-name)
-                                       e    (event-mult mult)]
+  (riemann.time/every! 10 (fn [] (let [mult (ssrp/get-multiplicity comp-name)
+                                       e    (event-mult comp-name mult vms-max)]
                                    (index e)
-                                   (to-graphite e)))))
+                                   #_(to-graphite e)))))
 
 ;; Scaling streams.
 (def mtw-sec 30)
@@ -194,19 +192,14 @@
 
     index
 
-    (where (and (tagged service-tags)
-                (service service-metric-re))
-           (moving-time-window mtw-sec
-                               (fn [events]
-                                 (let [mean (:metric (riemann.folds/mean events))]
-                                   (info "Average over sliding" mtw-sec "sec window:" mean)
-                                   (cond
-                                     ; TODO: look for the multiplicity in the index
-                                     ; (riemann.index/lookup (:index @riemann.config/core) comp-name".mult" comp-name"-mult")
-                                     (and (>= mean metric-thold-up) (< (ss-r/get-multiplicity comp-name) vms-max))
-                                       (put-scale-request :up comp-name scale-up-by)
-                                     (and (< mean metric-thold-down) (> (ss-r/get-multiplicity comp-name) vms-min))
-                                       (put-scale-request :down comp-name scale-down-by))))))
+    (where (and (tagged service-tags) (service service-metric-re))
+      (moving-time-window mtw-sec
+         (fn [events]
+           (let [mean (:metric (riemann.folds/mean events))]
+             (info "Average over sliding" mtw-sec "sec window:" mean)
+             (cond
+               (scale-up? mean) (put-scale-request :up comp-name scale-up-by)
+               (scale-down? mean) (put-scale-request :down comp-name scale-down-by))))))
 
     (where (and (= (:node-name event) comp-name)
                 (service (re-pattern "^load/load/shortterm")))
