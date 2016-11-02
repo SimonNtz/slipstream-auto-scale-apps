@@ -46,13 +46,12 @@ LoadPlugin logfile
 Include "/etc/collectd.d"
 EOF
 
-_cloud_service=`ss-get cloudservice`
-riemann_host=`ss-get orchestrator-${_cloud_service}:hostname`
+riemann_host=`ss-get autoscaler_hostname`
 riemann_port=5555
 
-# Orchestrator ready synchronization flag!
+# Riemann ready synchronization flag!
 ss-display "Waiting for Riemann to be ready."
-ss-get --timeout 600 orchestrator-${_cloud_service}:url.service
+ss-get --timeout 600 autoscaler_ready
 
 cat >/etc/collectd.d/write_riemann.conf<<EOF
 LoadPlugin write_riemann

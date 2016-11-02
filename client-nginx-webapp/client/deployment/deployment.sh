@@ -6,11 +6,11 @@ set -o pipefail
 # $source_root should be set in the wrapper SS script.
 source_location=${source_root}/client/app
 
-_cloud_service=`ss-get cloudservice`
-riemann_host=`ss-get orchestrator-${_cloud_service}:hostname`
+riemann_host=`ss-get autoscaler_hostname`
 riemann_port=5555
 
-webapp_ip=`ss-get nginx.1:hostname`
+# Nginx.
+webapp_ip=`ss-get webapp`
 
 hostname=`ss-get hostname`
 
@@ -32,9 +32,9 @@ deploy_and_run_riemann_client() {
 
     curl -sSf -o ~/locust-riemann-sender.py $source_location/locust-riemann-sender.py
 
-    # Orchestrator ready synchronization flag!
+    # Autoscaler ready synchronization flag!
     ss-display "Waiting for Riemann to be ready."
-    ss-get --timeout 600 orchestrator-${_cloud_service}:url.service
+    ss-get --timeout 600 autoscaler_ready
 
     chmod +x ~/locust-riemann-sender.py
     ~/locust-riemann-sender.py $riemann_host:$riemann_port &

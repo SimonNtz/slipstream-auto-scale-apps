@@ -12,13 +12,6 @@
 set -e
 set -x
 
-#
-# NB! The target gets run always on Executing state.
-# We want to avoid being run each time when scaling action is called.
-ORCH_LOCK_FILE=~/orchestrator-deployment-target.lock
-
-[ -f $ORCH_LOCK_FILE ] && { echo "Orchestrator deployment lock file exists. Exiting!.."; exit 0; }
-
 # $riemann_conf_url should be set in the wrapper SS script.
 # URL of the root of the Riemann configuration.
 # The following files are assumed under the URL:
@@ -193,8 +186,8 @@ service ufw stop
 # Publish Riemann dashboard endpoint.
 ss-set url.service "http://${hostname}:${riemann_dashboard_port}"
 
-ss-display "Riemann ready!"
+ss-display "Autoscaler is ready!"
+ss-set ready true
 
-touch $ORCH_LOCK_FILE
 exit 0
 

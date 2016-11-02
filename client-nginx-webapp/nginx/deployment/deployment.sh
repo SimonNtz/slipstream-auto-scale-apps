@@ -2,8 +2,7 @@
 set -e
 set -x
 
-_cloud_service=`ss-get cloudservice`
-riemann_host=`ss-get orchestrator-${_cloud_service}:hostname`
+riemann_host=`ss-get autoscaler_hostname`
 riemann_port=5555
 
 deploy_collectd() {
@@ -76,9 +75,9 @@ LoadPlugin write_riemann
 </Target>
 EOF
 
-    # Orchestrator ready synchronization flag!
+    # Autoscaler ready synchronization flag!
     ss-display "Waiting for Riemann to be ready."
-    ss-get --timeout 600 orchestrator-${_cloud_service}:url.service
+    ss-get --timeout 600 autoscaler_ready
 
     systemctl enable collectd.service
     systemctl start collectd.service
