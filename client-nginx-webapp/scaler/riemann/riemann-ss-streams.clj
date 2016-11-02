@@ -183,7 +183,7 @@
   (riemann.time/every! 10 (fn [] (let [mult (ssrp/get-multiplicity comp-name)
                                        e    (event-mult comp-name mult vms-max)]
                                    (index e)
-                                   #_(to-graphite e)))))
+                                   (to-graphite e)))))
 
 ;; Scaling streams.
 (def mtw-sec 30)

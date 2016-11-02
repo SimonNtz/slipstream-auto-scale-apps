@@ -43,19 +43,24 @@
 
 (defn- scale!
   [action request]
-  (let [params    (:params request)
-        comp-name (first (:comp params))
-        n         (read-string (second (:comp params)))
-        timeout   (read-string (:timeout params))]
-    (when (not (and comp-name n))
-      status400)
-    (log/info "Asked to scale" action "with" params)
-    (if (ssr/can-scale?)
-      (let [res ((scale-func action) comp-name n :timeout timeout)]
-        (if (ssr/action-success? res)
-          status200
-          (status-400 res)))
-      (status-400 (format "can not scale %s the run" (name action))))))
+  (log/info "Got scale request" action (:params request))
+  (if-let [comp (-> request :params :comp)]
+    (let [comp-name (first (s/split comp #"="))
+          n         (try (read-string (second (s/split comp #"="))) (catch Exception e "1"))
+          timeout   (try (read-string (-> request :params :timeout)) (catch Exception e "600"))]
+      (when (not (and comp-name n))
+        status400)
+      (log/info "Asked to scale" action "with" (:params request))
+      (if (ssr/can-scale?)
+        (let [res ((scale-func action) comp-name n :timeout timeout)]
+          (if (ssr/action-success? res)
+            status200
+            (status-400 res)))
+        (status-400 (format "Can not scale %s the run" (name action)))))
+    (do
+      (let [msg "Bad request. No component to scale provided."]
+        (log/error msg)
+        (status400 msg)))))
 
 (defn scale-up
   [request]
@@ -86,6 +91,7 @@
 
 (defn can-scale?
   []
+  (log/info "Asked if can scale.")
   (if (ssr/can-scale?)
     (status-200 "true")
     (status-200 "false")))
@@ -118,7 +124,8 @@
 
 (defn start
   [port]
-  (let [s (http/start-server app {:port port})]
+  (let [s (http/start-server app {:port port})
+        _ (log/info "Started server on" port)]
     (fn [] (.close s))))
 
 (defn stop
@@ -127,4 +134,4 @@
   [stop-fn]
   (try
     (and stop-fn (stop-fn))
-    (catch Exception e (println "Erm,...,."))))
+    (catch Exception e (log/error (.getMessage e)))))

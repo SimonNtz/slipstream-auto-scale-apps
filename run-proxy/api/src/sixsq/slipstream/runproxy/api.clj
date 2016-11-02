@@ -24,7 +24,7 @@
 
 (defn scale-failure?
   [scale-res]
-  (false? (= "success" (:state scale-res))))
+  (false? (and (= 200 (:status scale-res)) (= "success" (:body scale-res)))))
 
 (defn get-multiplicity
   [comp]
@@ -47,11 +47,19 @@
         (log/error "Failed to check if can scale with:" (.getMessage e))
         false))))
 
+(defn log-msg-scale-req
+  [url comp-name n timeout]
+  (format "Sending scale request to %s for %s to scale by %s with timeout %s sec." url comp-name n timeout))
+
 (defn- scale-request!
   [action comp-name n timeout]
-  (http/post (r-scale-action action)
-             {:form-params {:comp    [comp-name n]
-                            :timeout timeout}}))
+  (let [url (r-scale-action action)]
+    (log/info (log-msg-scale-req url comp-name n timeout))
+    (let [res (http/post url
+                         {:form-params {:comp    (str comp-name "=" n)
+                                        :timeout timeout}})
+          _   (log/info "Result of scale request:" res)]
+      res)))
 
 (defn scale-up
   [comp-name n timeout]
@@ -65,5 +73,6 @@
   [chan action comp-name n timeout]
   (cond
     (= :up action) (go (>! chan (scale-up comp-name n timeout)))
-    (= :down action) (go (>! chan (scale-down comp-name n timeout)))))
+    (= :down action) (go (>! chan (scale-down comp-name n timeout)))
+    :else (log/warn "Unknown scale action requested:" action)))
 

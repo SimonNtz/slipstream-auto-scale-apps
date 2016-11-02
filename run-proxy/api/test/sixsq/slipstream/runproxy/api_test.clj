@@ -1,8 +1,11 @@
 (ns sixsq.slipstream.runproxy.api-test
-    (:require
-      [clojure.test :refer :all]
-      [sixsq.slipstream.runproxy.api :refer :all]))
+  (:require
+    [clojure.test :refer :all]
+    [sixsq.slipstream.runproxy.api :refer :all]))
 
-(deftest a-test
-         (testing "FIXME, I pass."
-                  (is (= 0 0))))
+(deftest test-scale-failure?
+    (is (= true (scale-failure? {})))
+    (is (= true (scale-failure? {:status 400})))
+    (is (= true (scale-failure? {:status 400 :body "failure"})))
+    (is (= true (scale-failure? {:status 200 :body "failure"})))
+    (is (= false (scale-failure? {:status 200 :body "success"}))))
