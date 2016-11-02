@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>SlipStreamRunProxy-zip</artifactId>
+	<packaging>pom</packaging>
+	<name>SlipStreamRunProxy - ZIP</name>
+	<description>SlipStream Run Proxy (ZIP)</description>
+
+	<url>http://sixsq.com</url>
+	<parent>
+		<groupId>com.sixsq.slipstream</groupId>
+		<artifactId>SlipStreamRunProxy</artifactId>
+		<version>3.16-SNAPSHOT</version>
+	</parent>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.sixsq.slipstream</groupId>
+			<artifactId>SlipStreamRunProxyServer-jar</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sixsq.slipstream</groupId>
+			<artifactId>SlipStreamRunProxyApi-jar</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+
+  <build>
+   <plugins>
+		 <plugin>
+			 <groupId>org.apache.maven.plugins</groupId>
+			 <artifactId>maven-dependency-plugin</artifactId>
+			 <executions>
+				 <execution>
+					 <id>unpack-dependencies</id>
+					 <phase>package</phase>
+					 <goals>
+						 <goal>copy</goal>
+					 </goals>
+					 <configuration>
+						 <artifactItems>
+							 <artifactItem>
+								 <groupId>com.sixsq.slipstream</groupId>
+								 <artifactId>SlipStreamRunProxyServer-jar</artifactId>
+								 <version>${project.version}</version>
+								 <type>jar</type>
+								 <overWrite>false</overWrite>
+								 <destFileName>ss-run-proxy.jar</destFileName>
+							 </artifactItem>
+							 <artifactItem>
+								 <groupId>com.sixsq.slipstream</groupId>
+								 <artifactId>SlipStreamRunProxyApi-jar</artifactId>
+								 <version>${project.version}</version>
+								 <type>jar</type>
+								 <overWrite>false</overWrite>
+								 <destFileName>ss-run-proxy-api.jar</destFileName>
+							 </artifactItem>
+						 </artifactItems>
+						 <overWriteReleases>false</overWriteReleases>
+						 <overWriteSnapshots>true</overWriteSnapshots>
+					 </configuration>
+				 </execution>
+			 </executions>
+		 </plugin>
+
+      <plugin>
+	     <groupId>org.apache.maven.plugins</groupId>
+	     <artifactId>maven-assembly-plugin</artifactId>
+	     <configuration>
+          <appendAssemblyId>false</appendAssemblyId>
+	        <descriptors>
+	          <descriptor>bundle.xml</descriptor>
+	        </descriptors>
+	     </configuration>
+
+    	<executions>
+
+    	  <execution>
+    	    <id>cli-user-bundle</id>
+    	    <goals>
+    	      <goal>single</goal>
+    	    </goals>
+    	    <phase>package</phase>
+    	  </execution>
+
+    	</executions>
+
+      </plugin>
+    </plugins>
+
+  </build>
+
+  <scm>
+    <connection>scm:git:ssh://git@github.com/slipstream/slipstream-auto-scale-apps.git</connection>
+		<tag>HEAD</tag>
+    <url>scm:git:ssh://git@github.com/slipstream/slipstream-auto-scale-apps.git</url>
+    <developerConnection>scm:git:ssh://git@github.com/slipstream/slipstream-auto-scale-apps.git</developerConnection>
+  </scm>
+</project>

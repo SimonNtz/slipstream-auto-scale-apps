@@ -34,6 +34,9 @@ cat /etc/*-release*
 RIEMANN_VER_RHEL=0.2.11-1
 RIEMANN_VER_DEB=0.2.11_all
 
+SS_RUN_PROXY_VER=0.1
+SS_PROXY_PORT=8008
+
 riemann_dashboard_port=
 
 _configure_selinux() {
@@ -50,6 +53,19 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
     sudo sysctl -p
     cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+}
+
+_wait_server_started() {
+    set +e
+    for i in {1..12}; do
+        echo "$i .. sleeping 5 sec"
+        sleep 5
+        curl ${1}
+        if [ $? -eq 0 ];then
+            break
+        fi
+    done
+    set -e
 }
 
 deploy_ntpd_rhel() {
@@ -85,6 +101,10 @@ deploy_riemann_ubuntu() {
     # Ubuntu 14
     apt-get install -y ruby ruby-dev zlib1g-dev openjdk-7-jre build-essential
 
+    # Fix for http://stackoverflow.com/questions/6784463/error-trustanchors-parameter-must-be-non-empty
+    # on Ubuntu.
+    sudo /var/lib/dpkg/info/ca-certificates-java.postinst configure
+
     # need Ruby ~> 2.0 for json
     apt-add-repository -y ppa:brightbox/ruby-ng
     apt-get update -y
@@ -99,26 +119,28 @@ deploy_riemann_ubuntu() {
     curl -sSf -o $riemann_ss_conf $riemann_conf_url/riemann-ss-streams.clj
 
     # Download SS Clojure client.
-    ss_endpoint=$(awk -F= '/serviceurl/ {gsub(/^[ \t]+|[ \t]+$)/, "", $2); print $2}' \
-                    /opt/slipstream/client/sbin/slipstream.context)
-    mkdir -p /opt/slipstream/client/lib/
-    clj_ss_client=/opt/slipstream/client/lib/clj-ss-client.jar
-    curl -k -sSfL -o $clj_ss_client $ss_endpoint/downloads/clj-ss-client.jar
+    proxy_lib_loc=/opt/slipstream/client/lib
+    mkdir -p $proxy_lib_loc
+    ss_run_proxy=$proxy_lib_loc/ss-run-proxy.jar
+    ss_run_proxy_api=$proxy_lib_loc/ss-run-proxy-api.jar
+    v=$SS_RUN_PROXY_VER
+    curl -k -sSfL -o ss-run-proxy-v$v.tgz \
+        https://github.com/slipstream/slipstream-auto-scale-apps/releases/download/v$v/ss-run-proxy-v$v.tgz
+    tar -C $proxy_lib_loc -zxvf ss-run-proxy-v$v.tgz
 
+    # Start SS run proxy service.  TODO: need to chkconfig it!
+    export SERVER_PORT=$SS_PROXY_PORT
+    java -jar $ss_run_proxy &
+    echo "Waiting for SS run proxy to start."
+    _wait_server_started http://localhost:$SERVER_PORT/can-scale
+    # check SS run proxy is running.
+    curl http://localhost:$SERVER_PORT/can-scale
+
+    # Start Riemann.
     cat > /etc/default/riemann <<EOF
-EXTRA_CLASSPATH=$clj_ss_client
+EXTRA_CLASSPATH=$ss_run_proxy_api
 RIEMANN_CONFIG=$riemann_ss_conf
 EOF
-
-    # Hack.  Our `superstring` requires different version of java/lang/String.
-    sed -i -e \
-       's|JAR="/usr/share/riemann/riemann.jar:$EXTRA_CLASSPATH"|JAR="$EXTRA_CLASSPATH:/usr/share/riemann/riemann.jar"|' \
-       /usr/bin/riemann
-
-    # Fix for http://stackoverflow.com/questions/6784463/error-trustanchors-parameter-must-be-non-empty
-    # on Ubuntu.
-    sudo /var/lib/dpkg/info/ca-certificates-java.postinst configure
-
     /etc/init.d/riemann stop || true
     /etc/init.d/riemann start
 }

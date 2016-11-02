@@ -30,7 +30,7 @@ Starting service with uberjar and binding to 8008 on localhost
 
 ```
 $ export SERVER_PORT=8008
-$ java -cp SlipStreamRunProxyServer-jar-3.16-SNAPSHOT.jar
+$ java -jar SlipStreamRunProxyServer-jar-3.16-SNAPSHOT.jar
 ```
 
 ## Copyright

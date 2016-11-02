@@ -6,8 +6,7 @@
   (:require
     [clojure.core.async :refer [go >!]]
     [clj-http.client :as http]
-    [clojure.tools.logging :as log]
-    ))
+    [clojure.tools.logging :as log]))
 
 (def ^:dynamic *ss-proxy* "http://localhost:8008")
 (defn set-ss-proxy

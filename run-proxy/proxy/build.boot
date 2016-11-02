@@ -6,6 +6,7 @@
   :edition "community"
 
   :dependencies '[[org.clojure/clojure "1.8.0"]
+                  [org.martinklepsch/boot-gzip "0.1.2"]
                   [sixsq/build-utils "0.1.4" :scope "test"]])
 
 (require '[sixsq.build-fns :refer [merge-defaults
@@ -70,12 +71,9 @@
          []
          (comp
            (pom)
-           (sift :include #{#"api.clj"}
-                 :invert true)
-           #_(aot :all true)
            (aot :namespace #{'sixsq.slipstream.runproxy.main})
            (uber)
-           (jar)))
+           (jar :main 'sixsq.slipstream.runproxy.main)))
 
 (deftask run
          "runs ring app and watches for changes"
@@ -104,34 +102,5 @@
          []
          (comp
            (mvn-build)
-           (push :repo "sixsq")))
-
-(def api-artef-name "SlipStreamRunProxyApi-jar")
-(def api-artef-pom-loc (str "com.sixsq.slipstream/" api-artef-name))
-(def api-artef-project-name (symbol api-artef-pom-loc))
-(def api-artef-jar-name (str api-artef-name "-" (get-env :version) ".jar"))
-
-(deftask build-api-jar
-         []
-         (comp
-           (pom :project api-artef-project-name)
-           (sift
-             :include #{#"api.clj"
-                        #"pom.xml"
-                        #"pom.properties"
-                        })
-           (jar :file api-artef-jar-name)))
-
-(deftask mvn-build-api-jar
-         []
-         (comp
-           (build-api-jar)
-           (install :pom api-artef-pom-loc)
-           (target)))
-
-(deftask mvn-deploy-api-jar
-         []
-         (comp
-           (mvn-build-api-jar)
            (push :repo "sixsq")))
 
