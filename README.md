@@ -32,6 +32,9 @@ for examples on how to write the above scripts and configuration files.
 
 The main script to understand and write your own is `riemann-ss-streams.clj`.
 
+Another exmple of Riemann configuration file with streams 
+https://github.com/guardian/riemann-config/blob/master/main.clj
+
 ## Riemann dashboard on autoscaler
 
 After deployment of your application, the Riemann dashboard becomes available 
