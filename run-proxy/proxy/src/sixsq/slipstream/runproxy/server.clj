@@ -43,20 +43,20 @@
 
 (defn- scale!
   [action request]
-  (log/info "Got scale request" action (:params request))
+  (log/info "Processing scale request:" action (:params request))
   (if-let [comp (-> request :params :comp)]
     (let [comp-name (first (s/split comp #"="))
           n         (try (read-string (second (s/split comp #"="))) (catch Exception e "1"))
           timeout   (try (read-string (-> request :params :timeout)) (catch Exception e "600"))]
       (when (not (and comp-name n))
         status400)
-      (log/info "Asked to scale" action "with" (:params request))
       (if (ssr/can-scale?)
-        (let [res ((scale-func action) comp-name n :timeout timeout)]
+        (let [_ (log/info "Proxying scale request:" action comp-name n timeout)
+              res ((scale-func action) comp-name n :timeout timeout)]
           (if (ssr/action-success? res)
             status200
             (status-400 res)))
-        (status-400 (format "Can not scale %s the run" (name action)))))
+        (status-400 (format "Can not scale %s the deployment." (name action)))))
     (do
       (let [msg "Bad request. No component to scale provided."]
         (log/error msg)
