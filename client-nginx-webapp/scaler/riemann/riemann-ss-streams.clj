@@ -14,30 +14,23 @@
 ; Scan indexes for expired events every N seconds.
 (periodically-expire 20)
 
-(include "ss-scale-support.clj")
+(require '[sixsq.slipstream.riemann.scale :as ss])
 
 ;; Application elasticity constraints.
-;; TODO: Read from .edn and reload service to pickup new values.
-(set-elasticity-constaints
-  {:comp-name         "webapp"
-   :service-tags      ["webapp"]
-   :service-metric    "avg_response_time"
-   :metric-thold-up   7000.0
-   :metric-thold-down 4000.0
-   :vms-max           4})
+(ss/set-elasticity-constaints "/etc/riemann/scale-constraints.edn")
 
-(def compnt (first *elasticity-constaints*))
+(def cmp (first ss/*elasticity-constaints*))
 
 ;; Send service metrics to graphite.
 (let [index (default :ttl 60 (index))]
   (streams
-    (where (tagged service-tags)  ;; service-tags var is defined in ss-scale-support.clj
+    (where (tagged ss/*service-tags*)
            to-graphite)))
 
 ;; Multiplicity indexing stream.
 ;; Get multiplicity of the component instances, index it and send to graphite.
 (let [index (default :ttl 20 (index))]
-  (riemann.time/every! 10 (fn [] (let [e (comp-mult-as-event comp)]
+  (riemann.time/every! 10 (fn [] (let [e (ss/comp-mult-as-event cmp)]
                                    (index e)
                                    (to-graphite e)))))
 
@@ -46,19 +39,14 @@
 (let [index (default :ttl 60 (index))]
   (streams
     index
-    (where (and (tagged service-tags) (service (:service-metric-re compnt)))
+    (where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
            (moving-time-window mtw-sec
                                (fn [events]
                                  (let [mean (:metric (riemann.folds/mean events))]
                                    (info "Average over sliding" mtw-sec "sec window:" mean)
-                                   (cond-scale mean compnt)))))
+                                   (ss/cond-scale mean cmp)))))
 
-    (where (and (= (:node-name event) (:comp-name compnt))
-                (service (re-pattern "^load/load/shortterm")))
-           (coalesce 5
-                     (smap folds/count
-                           (with {:host nil :instance-id nil :service (str (:comp-name compnt) "-count")}
-                                 index))))
+    (ss/count-components index)
 
     (expired
       #(info "expired" %))))

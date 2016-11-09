@@ -24,6 +24,8 @@
                     [org.clojure/tools.logging]
                     [org.clojure/tools.reader "1.0.0-beta3"]
 
+                    [riemann "0.2.11"]
+
                     [clj-http]
 
                     [adzerk/boot-test]

@@ -1,12 +1,21 @@
-;; SlipStream autoscaling.
-; Using core.async due to synchrnonous model of event processing in Riemann.
-; http://riemann.io/howto.html#client-backpressure-latency-and-queues
-(require '[clojure.core.async :refer [go timeout chan sliding-buffer <! >! alts!]])
-(require '[sixsq.slipstream.runproxy.api :as ssrp])
-(require '[clojure.set :as cs])
-(require '[clojure.tools.logging :as log])
+(ns sixsq.slipstream.riemann.scale
+  "
+  SlipStream autoscaling library utilizing Riemann.
 
-(require 'riemann.common)
+  Using core.async due to synchrnonous model of event processing in Riemann.
+  http://riemann.io/howto.html#client-backpressure-latency-and-queues
+  "
+  (:require
+    [clojure.core.async :refer [go timeout chan sliding-buffer <! >! alts!]]
+    [clojure.edn :as edn]
+    [clojure.set :as cs]
+    [clojure.tools.logging :as log]
+
+    [sixsq.slipstream.runproxy.api :as ssrp]
+    [riemann.common :as rc]
+    [riemann.folds :as rf]
+    [riemann.streams :as rs]
+    ))
 
 (ssrp/set-ss-proxy "http://localhost:8008")
 
@@ -15,6 +24,7 @@
 ;;
 
 (def constraint-template-required
+  "Template with the required attributes in a constraint."
   {:comp-name         "change-comp-name"
    :service-tags      []
    :service-metric    "change-service-metric"
@@ -23,19 +33,23 @@
    :vms-max           1})
 
 (def constraint-template
+  "Constraint template."
   (merge constraint-template-required
          {:vms-min       1
           :scale-up-by   1
           :scale-down-by 1}))
 
 (def required-constraint-keys
+  "Keys required in the constraint definition."
   (-> constraint-template-required
       keys
       set))
 
 (def ^:dynamic *elasticity-constaints* [])
 
-(defn constaint-valid?
+(def ^:dynamic *service-tags* #{})
+
+(defn- constaint-valid?
   [c]
   (cs/subset? required-constraint-keys (set (keys c))))
 
@@ -55,7 +69,7 @@
                       (merge constraint-template)
                       (assoc-sm-re))))
 
-(defn- set-constraint
+(defn- update-constraints
   [current-set new-constraint]
   (if (not (empty? new-constraint))
     (do
@@ -63,21 +77,44 @@
       (append-constraint current-set new-constraint))
     (log/warn "Empty constraint provided.")))
 
+(defn comp-names
+  "Returns a list of component names currently registerred for scaling."
+  []
+  (set (map #(:comp-name %) *elasticity-constaints*)))
+
+(defn set-constraint
+  [c]
+  (alter-var-root #'*elasticity-constaints* update-constraints c))
+
 (defn log-elasticity-constraints
   []
   (log/info "Elasiticity constraints:" *elasticity-constaints*))
 
-(defn set-elasticity-constaints
-  "The required keys are in required-constraint-keys.  The full set is
-  a unity of required-constraint-keys and constraints-defaults."
-  [cs]
-  (doseq [c cs]
-    (log/info "Setting elasticity constraint:" c)
-    (alter-var-root #'*elasticity-constaints* set-constraint c))
-  (log-elasticity-constraints))
+(defn set-service-tags
+  []
+  (alter-var-root
+    #'*service-tags*
+    (fn [_]
+      (->> *elasticity-constaints*
+           (map #(:service-tags %))
+           (apply concat)
+           set))))
 
-(def service-tags
-  (apply concat (map #(:service-tags %) *elasticity-constaints*)))
+(defn set-elasticity-constaints
+  "Constraints are expected either as a vector of constraints or as a
+  string being a path to edn file defining the vector of constraints.
+
+  The required keys are in required-constraint-keys.  The full set is
+  in constraint-template."
+  [path-or-vec]
+  (let [cs (if (= java.lang.String (type path-or-vec))
+             (-> path-or-vec slurp edn/read-string)
+             path-or-vec)]
+    (doseq [c cs]
+      (log/info "Setting elasticity constraint:" c)
+      (set-constraint c)))
+  (set-service-tags)
+  (log-elasticity-constraints))
 
 ;;
 ;; Scaler logic.
@@ -189,6 +226,8 @@
   (keyword (format "scale-%s-by" (name action))))
 
 (defn put-scale-request
+  "Asynchronously places the actual scale request for `comp`, provided the
+  scale `action` is recognized and the scaler worker is free."
   [action comp & _]
   (when (contains? scale-actions action)
     (let [comp-name (:comp-name comp)
@@ -200,7 +239,8 @@
                            (busy!))
         (= true @busy?) (log-scaler-busy action comp-name n)))))
 
-(defn- get-multiplicity
+(defn get-multiplicity
+  "Retuns multiplicity of the comp."
   [comp]
   ; TODO: look for the multiplicity in the index.  It should be put there by a separate stream.
   ; (riemann.index/lookup (:index @riemann.config/core) comp-name".mult" comp-name"-mult")
@@ -209,24 +249,30 @@
 (defn- event-mult
   [mult comp]
   (let [{:keys [comp-name vms-max]} comp]
-    (event {
-            :service     (str comp-name "-mult")
-            :host        (str comp-name ".mult")
-            :state       (condp < mult
-                           vms-max "critical"
-                           (- vms-max 2) "warning"
-                           "ok")
-            :description (str "Multiplicity of " comp-name " in SS run.")
-            :ttl         30
-            :metric      mult})))
+    (rc/event {
+               :service     (str comp-name "-mult")
+               :host        (str comp-name ".mult")
+               :state       (condp < mult
+                              vms-max "critical"
+                              (- vms-max 2) "warning"
+                              "ok")
+               :description (str "Multiplicity of " comp-name " in SS run.")
+               :ttl         30
+               :metric      mult})))
 
 (defn comp-mult-as-event
+  "Returns component multiplicity as Riemann event.
+
+  Requests SS deployment for the current multiplicity of the component.
+  Wraps it into Riemann event with the service name <comp-name>-mult.
+  Useful for indexing with successive querying and display in dashboard(s)."
   [comp]
   (-> comp
       get-multiplicity
       (event-mult comp)))
 
 (defn scale-up?
+  "Predicate checking whether the scale up action should be requested."
   [mean comp]
   (and (>= mean (:metric-thold-up comp))
        (< (get-multiplicity comp) (:vms-max comp))))
@@ -238,6 +284,8 @@
        (> (get-multiplicity comp) (:vms-min comp))))
 
 (defn cond-scale-action
+  "Given metric value and component, decide which scale action should
+  be performed."
   [metric-val comp]
   (cond
     (scale-up? metric-val comp) :up
@@ -245,8 +293,36 @@
     :else :none))
 
 (defn cond-scale
-  "Given component and service metric value, conditionally scale up/down the component."
+  "Given component and service metric value, conditionally scale up/down
+  the component."
   [metric-val comp]
   (-> (cond-scale-action metric-val comp)
       (put-scale-request comp)))
 
+
+;;
+;; Hepler streams.
+;;
+
+(def count-on-metric "load/load/shortterm")
+
+(defn- valid-for-counting?
+  [event]
+  (and (contains? (comp-names) (:node-name event))
+       (= count-on-metric (:service event))))
+
+(defn count-components
+  "Counts and indexes the number of the components sending 'load/load/shortterm'
+  events with 'node-name' field equals to the name of the component.  The name
+  of the new indexed event will be '<comp-name>-count'.  Useful for knowing the
+  actual/current number of components in visuaisation on dashboard or in other
+  parts of threasholding."
+  [index & children]
+  (fn [event]
+    (rs/where (valid-for-counting? event)
+              (rs/coalesce 5
+                           (rs/smap rf/count
+                                    (rs/with {:service     (str (:node-name event) "-count")
+                                              :host        nil
+                                              :instance-id nil}
+                                             index))))))
