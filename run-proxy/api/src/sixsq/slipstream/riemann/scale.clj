@@ -12,9 +12,11 @@
     [clojure.tools.logging :as log]
 
     [sixsq.slipstream.runproxy.api :as ssrp]
-    [riemann.common :as rc]
+    [riemann.config :as rc]
     [riemann.folds :as rf]
     [riemann.streams :as rs]
+    [riemann.time :as rt]
+    [riemann.graphite :as rg]
     ))
 
 (ssrp/set-ss-proxy "http://localhost:8008")
@@ -216,7 +218,7 @@
 (defonce ^:dynamic *scalers-executor* (scalers scale-chan))
 
 ;;
-;; Action helpers.
+;; Scale action helpers.
 ;;
 
 (def scale-actions #{:up :down})
@@ -249,16 +251,16 @@
 (defn- event-mult
   [mult comp]
   (let [{:keys [comp-name vms-max]} comp]
-    (rc/event {
-               :service     (str comp-name "-mult")
-               :host        (str comp-name ".mult")
-               :state       (condp < mult
-                              vms-max "critical"
-                              (- vms-max 2) "warning"
-                              "ok")
-               :description (str "Multiplicity of " comp-name " in SS run.")
-               :ttl         30
-               :metric      mult})))
+    {:service     (str comp-name "-mult")
+     :host        (str comp-name ".mult")
+     :state       (condp < mult
+                    vms-max "critical"
+                    (- vms-max 2) "warning"
+                    "ok")
+     :description (str "Multiplicity of " comp-name " in SS run.")
+     :ttl         30
+     :metric      mult
+     :time        (rt/unix-time)}))
 
 (defn comp-mult-as-event
   "Returns component multiplicity as Riemann event.
@@ -301,8 +303,20 @@
 
 
 ;;
-;; Hepler streams.
+;; Hepler Riemann streams.
 ;;
+
+(def ^:dynamic *to-graphite* identity)
+(def graphite-conf {:host "127.0.0.1"})
+
+(defn with-graphite
+  "Sets configuration for sending metrics to graphite.  See
+  riemann.graphite.graphite function for possible options
+  in the configuration."
+  [& [conf]]
+  (alter-var-root #'*to-graphite*
+                  (fn [_] (rg/graphite (or conf graphite-conf))))
+  *to-graphite*)
 
 (def count-on-metric "load/load/shortterm")
 
@@ -326,3 +340,22 @@
                                               :host        nil
                                               :instance-id nil}
                                              index))))))
+
+(defn index-comp-multiplicity
+  "Gets multiplicity of components from SS, indexes them and invokes any other
+  provided streams."
+  [& children]
+  (let [index (rs/default :ttl 20 (rc/index))]
+    (rt/every! 10
+               (fn []
+                 (doseq [c *elasticity-constaints*]
+                   (rs/call-rescue (comp-mult-as-event c)
+                                   (concat [index *to-graphite*] (or children []))))))))
+
+(defn all-tagged-to-graphite
+  "Sends all tagged metrics to grafite."
+  []
+  (let [index (rs/default :ttl 60 (rc/index))]
+    (rc/streams
+      (rs/where (rs/tagged *service-tags*)
+                *to-graphite*))))

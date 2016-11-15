@@ -9,30 +9,23 @@
   (udp-server {:host host})
   (ws-server {:host host}))
 
-(def to-graphite (graphite {:host "127.0.0.1"}))
-
 ; Scan indexes for expired events every N seconds.
 (periodically-expire 20)
 
 (require '[sixsq.slipstream.riemann.scale :as ss])
+
+(ss/with-graphite)
 
 ;; Application elasticity constraints.
 (ss/set-elasticity-constaints "/etc/riemann/scale-constraints.edn")
 
 (def cmp (first ss/*elasticity-constaints*))
 
-;; Send service metrics to graphite.
-(let [index (default :ttl 60 (index))]
-  (streams
-    (where (tagged ss/*service-tags*)
-           to-graphite)))
+;; Send out tagged service metrics to graphite.
+(ss/all-tagged-to-graphite)
 
 ;; Multiplicity indexing stream.
-;; Get multiplicity of the component instances, index it and send to graphite.
-(let [index (default :ttl 20 (index))]
-  (riemann.time/every! 10 (fn [] (let [e (ss/comp-mult-as-event cmp)]
-                                   (index e)
-                                   (to-graphite e)))))
+(ss/index-comp-multiplicity)
 
 ;; Scaling streams.
 (def mtw-sec 30)
