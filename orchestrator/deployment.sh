@@ -111,6 +111,9 @@ deploy_riemann_ubuntu() {
     riemann_ss_conf=/etc/riemann/riemann-ss-streams.clj
     curl -sSf -o $riemann_ss_conf $riemann_conf_url/riemann-ss-streams.clj
 
+    scale_constraints_url=`ss-get scale_constraints_url`
+    curl -sSf -o /etc/riemann/scale-constraints.edn $scale_constraints_url
+
     # Download SS Clojure client.
     proxy_lib_loc=/opt/slipstream/client/lib
     mkdir -p $proxy_lib_loc
