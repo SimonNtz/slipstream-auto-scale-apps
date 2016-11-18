@@ -325,6 +325,11 @@
   (and (contains? (comp-names) (:node-name event))
        (= count-on-metric (:service event))))
 
+(defn info
+  [& msg]
+  (fn [e]
+    (log/info msg e)))
+
 (defn count-components
   "Counts and indexes the number of the components sending 'load/load/shortterm'
   events with 'node-name' field equals to the name of the component.  The name
@@ -333,6 +338,8 @@
   parts of threasholding."
   [index & children]
   (fn [event]
+    (when (not= "riemann" (:host event))
+      (log/info "EVENT Valid for counting???" (valid-for-counting? event) event))
     (rs/where (valid-for-counting? event)
               (rs/coalesce 5
                            (rs/smap rf/count

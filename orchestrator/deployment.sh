@@ -27,7 +27,7 @@ cat /etc/*-release*
 RIEMANN_VER_RHEL=0.2.11-1
 RIEMANN_VER_DEB=0.2.11_all
 
-SS_RUN_PROXY_VER=0.1
+SS_RUN_PROXY_VER=0.2
 SS_PROXY_PORT=8008
 
 riemann_dashboard_port=
