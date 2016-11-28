@@ -30,14 +30,14 @@ deploy_and_run_riemann_client() {
     pip install --upgrade six
     pip install riemann-client
 
-    curl -sSf -o ~/locust-riemann-sender.py $source_location/locust-riemann-sender.py
+    curl -sSf -o ~/locust_riemann_sender.py $source_location/locust_riemann_sender.py
 
     # Autoscaler ready synchronization flag!
     ss-display "Waiting for Riemann to be ready."
     ss-get --timeout 600 autoscaler_ready
 
-    chmod +x ~/locust-riemann-sender.py
-    ~/locust-riemann-sender.py $riemann_host:$riemann_port &
+    chmod +x ~/locust_riemann_sender.py
+    ~/locust_riemann_sender.py $riemann_host:$riemann_port &
 }
 
 deploy_landing_web_page() {
