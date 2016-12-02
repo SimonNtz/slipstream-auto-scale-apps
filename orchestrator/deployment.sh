@@ -119,10 +119,10 @@ deploy_riemann_ubuntu() {
     mkdir -p $proxy_lib_loc
     ss_run_proxy=$proxy_lib_loc/ss-run-proxy.jar
     ss_run_proxy_api=$proxy_lib_loc/ss-run-proxy-api.jar
-    v=$SS_RUN_PROXY_VER
-    curl -k -sSfL -o ss-run-proxy-v$v.tgz \
-        https://github.com/slipstream/slipstream-auto-scale-apps/releases/download/v$v/ss-run-proxy-v$v.tgz
-    tar -C $proxy_lib_loc -zxvf ss-run-proxy-v$v.tgz
+    v=v$SS_RUN_PROXY_VER
+    curl -k -sSfL -o ss-run-proxy-$v.tgz \
+        https://github.com/slipstream/slipstream-auto-scale-apps/releases/download/$v/ss-run-proxy-$v.tgz
+    tar -C $proxy_lib_loc -zxvf ss-run-proxy-$v.tgz
 
     # Start SS run proxy service.  TODO: need to chkconfig it!
     export SERVER_PORT=$SS_PROXY_PORT
