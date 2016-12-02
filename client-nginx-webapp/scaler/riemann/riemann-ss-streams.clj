@@ -31,6 +31,14 @@
 (def mtw-sec 30)
 (let [index (default :ttl 60 (index))]
   (streams
+    (where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
+           (fn [event]
+             (assoc event :state
+                          (condp < (:metric_f event)
+                            (:metric-thold-up cmp) "critical"
+                            (:metric-thold-down cmp) "warning" ;; 75%
+                            "ok"))
+             (index event)))
     index
     (where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
            (moving-time-window mtw-sec
