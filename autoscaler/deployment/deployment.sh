@@ -143,12 +143,15 @@ EOF
     /etc/init.d/riemann stop || true
     /etc/init.d/riemann start
 }
+_get_from_constraints_file() {
+    awk '/'$1'/ {print $2}' $SCALE_CONSTRAINTS_FILE | tr '"' ' '
+}
 start_riemann_dash() {
     cd /etc/riemann/
     wget $riemann_conf_url/dashboard.rb
     wget $riemann_conf_url/dashboard.json
-    comp_name=$(awk '/:comp-name/ {print $2}' $SCALE_CONSTRAINTS_FILE)
-    service_metric=$(awk '/:service-metric/ {print $2}' $SCALE_CONSTRAINTS_FILE)
+    comp_name=$(_get_from_constraints_file :comp-name)
+    service_metric=$(_get_from_constraints_file :service-metric)
     sed -i -e "s/<riemann-host>/$hostname/" /etc/riemann/dashboard.json
     sed -i -e "s/<comp-name>/$comp_name/g" /etc/riemann/dashboard.json
     sed -i -e "s/<service-metric>/$service_metric/g" /etc/riemann/dashboard.json
