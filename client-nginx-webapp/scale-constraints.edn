@@ -1,0 +1,8 @@
+[
+ {:comp-name         "webapp"
+  :service-tags      ["webapp"]
+  :service-metric    "avg_response_time"
+  :metric-thold-up   7000.0
+  :metric-thold-down 4000.0
+  :vms-max           4}
+ ]

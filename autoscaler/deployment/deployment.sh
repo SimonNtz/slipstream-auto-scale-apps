@@ -12,13 +12,15 @@
 set -e
 set -x
 
-# $riemann_conf_url should be set in the wrapper SS script.
 # URL of the root of the Riemann configuration.
 # The following files are assumed under the URL:
 #  riemann-ss-streams.clj - Riemann streams using SlipStream scale up/down actions,
 #  dashboard.rb - Riemann dashboard configuration,
 #  dashboard.json - Riemann dashboard layout and queries.
-[ -z "$riemann_conf_url" ] && { echo "Required \$riemann_conf_url environment variable is not set."; exit 1; } || true
+riemann_conf_url=`ss-get riemann_config_url`
+
+# Scalability constraints provided by the user for his application.
+scale_constraints_url=`ss-get scale_constraints_url`
 
 hostname=`ss-get hostname`
 
@@ -29,6 +31,8 @@ RIEMANN_VER_DEB=0.2.11_all
 
 SS_RUN_PROXY_VER=0.2
 SS_PROXY_PORT=8008
+
+SCALE_CONSTRAINTS_FILE=/etc/riemann/scale-constraints.edn
 
 riemann_dashboard_port=
 
@@ -111,8 +115,7 @@ deploy_riemann_ubuntu() {
     riemann_ss_conf=/etc/riemann/riemann-ss-streams.clj
     curl -sSf -o $riemann_ss_conf $riemann_conf_url/riemann-ss-streams.clj
 
-    scale_constraints_url=`ss-get scale_constraints_url`
-    curl -sSf -o /etc/riemann/scale-constraints.edn $scale_constraints_url
+    curl -sSf -o $SCALE_CONSTRAINTS_FILE $scale_constraints_url
 
     # Download SS Clojure client.
     proxy_lib_loc=/opt/slipstream/client/lib
@@ -140,12 +143,18 @@ EOF
     /etc/init.d/riemann stop || true
     /etc/init.d/riemann start
 }
+_get_from_constraints_file() {
+    awk '/'$1'/ {print $2}' $SCALE_CONSTRAINTS_FILE | tr -d '"'
+}
 start_riemann_dash() {
     cd /etc/riemann/
     wget $riemann_conf_url/dashboard.rb
     wget $riemann_conf_url/dashboard.json
+    comp_name=$(_get_from_constraints_file :comp-name)
+    service_metric=$(_get_from_constraints_file :service-metric)
     sed -i -e "s/<riemann-host>/$hostname/" /etc/riemann/dashboard.json
-    sed -i -e 's/<comp-name>/webapp/g' /etc/riemann/dashboard.json
+    sed -i -e "s/<comp-name>/$comp_name/g" /etc/riemann/dashboard.json
+    sed -i -e "s/<service-metric>/$service_metric/g" /etc/riemann/dashboard.json
     riemann-dash dashboard.rb &
     riemann_dashboard_port=`awk '/port/ {print $3}' /etc/riemann/dashboard.rb`
 }
