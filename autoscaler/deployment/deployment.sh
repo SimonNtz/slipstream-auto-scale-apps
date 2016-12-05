@@ -144,7 +144,7 @@ EOF
     /etc/init.d/riemann start
 }
 _get_from_constraints_file() {
-    awk '/'$1'/ {print $2}' $SCALE_CONSTRAINTS_FILE | tr '"' ' '
+    awk '/'$1'/ {print $2}' $SCALE_CONSTRAINTS_FILE | tr -d '"'
 }
 start_riemann_dash() {
     cd /etc/riemann/
