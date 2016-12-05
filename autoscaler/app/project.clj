@@ -1,4 +1,4 @@
-(defproject streams "3.11-SNAPSHOT"
+(defproject streams "3.17-SNAPSHOT"
   :description "Riemann streams for SlipStream."
   :url "http://sixsq.com"
 

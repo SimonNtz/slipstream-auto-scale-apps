@@ -49,7 +49,7 @@
 
 (def ^:dynamic *elasticity-constaints* [])
 
-(def ^:dynamic *service-tags* #{})
+(def ^:dynamic *service-tags* [])
 
 (defn- constaint-valid?
   [c]
@@ -99,8 +99,7 @@
     (fn [_]
       (->> *elasticity-constaints*
            (map #(:service-tags %))
-           (apply concat)
-           set))))
+           (apply concat)))))
 
 (defn set-elasticity-constaints
   "Constraints are expected either as a vector of constraints or as a
@@ -303,7 +302,7 @@
 
 
 ;;
-;; Hepler Riemann streams.
+;; Hepler functions and Riemann streams.
 ;;
 
 (def ^:dynamic *to-graphite* identity)
@@ -336,17 +335,16 @@
   of the new indexed event will be '<comp-name>-count'.  Useful for knowing the
   actual/current number of components in visuaisation on dashboard or in other
   parts of threasholding."
-  [index & children]
-  (fn [event]
-    (when (not= "riemann" (:host event))
-      (log/info "EVENT Valid for counting???" (valid-for-counting? event) event))
-    (rs/where (valid-for-counting? event)
-              (rs/coalesce 5
-                           (rs/smap rf/count
-                                    (rs/with {:service     (str (:node-name event) "-count")
-                                              :host        nil
-                                              :instance-id nil}
-                                             index))))))
+  []
+  (let [index (rs/default :ttl 60 (rc/index))]
+    (rc/streams
+      (rs/where* #(valid-for-counting? %)
+                 (rs/coalesce 5
+                              (rs/smap rf/count
+                                       (rs/adjust #(merge % {:service     (str (:node-name %) "-count")
+                                                             :host        nil
+                                                             :instance-id nil})
+                                                  index)))))))
 
 (defn index-comp-multiplicity
   "Gets multiplicity of components from SS, indexes them and invokes any other
@@ -358,6 +356,22 @@
                  (doseq [c *elasticity-constaints*]
                    (rs/call-rescue (comp-mult-as-event c)
                                    (concat [index *to-graphite*] (or children []))))))))
+
+(defn set-monitored-service-state
+  "Sets :state on the event of the monitored service and indexes the new event."
+  []
+  (let [index (rs/default :ttl 60 (rc/index))
+        cmp   (first *elasticity-constaints*)]
+    (rc/streams
+      (rs/where (and (rs/tagged-any *service-tags*) (service (:service-metric-re cmp)))
+                (rs/adjust #(assoc % :state
+                                     (condp < (:metric %)
+                                       (:metric-thold-up cmp) "critical"
+                                       (:metric-thold-down cmp) "warning" ;; 75%
+                                       "ok"))
+                           index)
+                (else index)))
+    ))
 
 (defn all-tagged-to-graphite
   "Sends all tagged metrics to grafite."

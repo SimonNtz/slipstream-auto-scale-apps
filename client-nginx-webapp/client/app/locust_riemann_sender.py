@@ -100,6 +100,8 @@ def publish_events(events, client):
         try:
             client.event(**event)
             print "SENT:", event
+        except riemann_client.transport.RiemannError as ex:
+            print "Riemann FAILED:", ex, event
         except Exception as ex:
             print "FAILED:", ex, event
             raise ex
