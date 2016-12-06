@@ -1,0 +1,34 @@
+[
+ {
+  ;;
+  ;; Mandatory parameters.
+
+  ; name of the component in the application
+  :comp-name         "webapp"
+
+  ; service tags as sent by Riemann publisher in the event
+  :service-tags      ["webapp"]
+
+  ; monitored service metric name (as sent with Riemann event)
+  :service-metric    "avg_response_time"
+
+  ; value of the metric after which start adding component instances
+  :metric-thold-up   500.0
+  ; value of the metric after which start removing component instances
+  :metric-thold-down 200.0
+
+  ; max number of component instances allowed
+  :vms-max           4   ; "Price" constraint.
+
+  ;;
+  ;; Optional parameters (with defaults).
+
+  ; min number of component instances allowed
+  ;:vms-min       1
+
+  ; number of instances by which to scale up
+  ;:scale-up-by   1
+  ; number of instances by which to scale down
+  ;:scale-down-by 1
+ }
+]
