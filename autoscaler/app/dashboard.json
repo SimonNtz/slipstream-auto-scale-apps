@@ -61,8 +61,20 @@
               "version": 11,
               "children": [
                 {
+                  "col_sort": "lexical",
+                  "cols": "host",
+                  "id": "cd8bc7adf8322e3c5211ec7a9e25d7ab12a4f1a0",
+                  "max": "",
+                  "query": "(service = \"user_count\") or (service = \"fail_ratio\") or (service = \"current_rps\")",
+                  "row_sort": "lexical",
+                  "rows": "service",
+                  "title": "client metrics",
+                  "type": "Grid",
+                  "version": 4,
+                  "weight": 0.25},
+                {
                   "type": "Dial",
-                  "weight": 1,
+                  "weight": 0.5,
                   "id": "aa4e362d027a77fa9c6fbdb5a3263c813ed2a6b4",
                   "version": 17,
                   "title": "<comp-name> - multiplicity",
