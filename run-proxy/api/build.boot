@@ -1,4 +1,4 @@
-(def +version+ "3.16-SNAPSHOT")
+(def +version+ "3.17-SNAPSHOT")
 
 (set-env!
   :project 'com.sixsq.slipstream/SlipStreamRunProxyApi-jar
@@ -23,6 +23,8 @@
                     [org.clojure/core.async]
                     [org.clojure/tools.logging]
                     [org.clojure/tools.reader "1.0.0-beta3"]
+
+                    [riemann "0.2.11"]
 
                     [clj-http]
 
