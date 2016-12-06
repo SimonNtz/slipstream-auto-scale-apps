@@ -1,0 +1,7 @@
+ {"service": "avg_response_time",
+  "tags": ["webapp"],
+  "ttl": 10,
+  "state": "ok",
+  "host": "httpclient",
+  "time": 1479202972,
+  "metric_f": 3167.896}
