@@ -28,7 +28,9 @@ run_httpclient() {
 
 deploy_and_run_riemann_client() {
     pip install --upgrade six
-    pip install riemann-client
+    # Due to https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=835688
+    pip install protobuf==3.1.0
+    pip install riemann-client==6.3.0
 
     curl -sSf -o ~/locust_riemann_sender.py $source_location/locust_riemann_sender.py
 
