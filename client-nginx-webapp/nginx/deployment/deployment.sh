@@ -5,6 +5,23 @@ set -x
 riemann_host=`ss-get autoscaler_hostname`
 riemann_port=5555
 
+deploy_and_run_riemann_client() {
+    pip install --upgrade six
+    # Due to https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=835688
+    pip install protobuf==3.1.0
+    pip install riemann-client==6.3.0
+
+    curl -sSf -o ~/locust_riemann_sender.py $source_location/locust_riemann_sender.py
+
+    # Autoscaler ready synchronization flag!
+    ss-display "Waiting for Riemann to be ready."
+    ss-get --timeout 600 autoscaler_ready
+
+    chmod +x ~/locust_riemann_sender.py
+    ~/locust_riemann_sender.py $riemann_host:$riemann_port &
+}
+
+
 deploy_collectd() {
     #
     # For collectd 5.x with collectd-write_riemann
@@ -167,8 +184,11 @@ EOF
     systemctl start nginx.service
 }
 
+
 deploy_nginx
+deploy_and_run_riemann_client
 deploy_collectd
+
 
 hostname=`ss-get hostname`
 url="http://$hostname"
