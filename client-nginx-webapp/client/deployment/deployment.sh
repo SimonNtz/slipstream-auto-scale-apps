@@ -6,8 +6,8 @@ set -o pipefail
 # $source_root should be set in the wrapper SS script.
 source_location=${source_root}/client/app
 
-riemann_host=`ss-get autoscaler_hostname`
-riemann_port=5555
+#riemann_host=`ss-get autoscaler_hostname`
+#riemann_port=5555
 
 # Nginx.
 webapp_ip=`ss-get webapp`
@@ -32,7 +32,7 @@ deploy_and_run_riemann_client() {
     pip install protobuf==3.1.0
     pip install riemann-client==6.3.0
 
-    curl -sSf -o ~/locust_riemann_sender.py $source_location/locust_riemann_sender.py
+    curl -sSf -o ~/nginx_riemann_sender.py $source_location/nginx_riemann_sender.py
 
     # Autoscaler ready synchronization flag!
     ss-display "Waiting for Riemann to be ready."
@@ -56,11 +56,10 @@ deploy_landing_web_page() {
 
 deploy_httpclient
 run_httpclient
-deploy_and_run_riemann_client
+#deploy_and_run_riemann_client
 deploy_landing_web_page
 
 url="http://${hostname}"
 ss-set ss:url.service $url
 ss-set url.service $url
 ss-display "Load generator: $url:8089"
-
