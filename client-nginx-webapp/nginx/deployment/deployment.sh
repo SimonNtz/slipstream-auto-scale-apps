@@ -14,14 +14,14 @@ deploy_and_run_riemann_client() {
     pip install protobuf==3.1.0
     pip install riemann-client==6.3.0
 
-    curl -sSf -o ~/locust_riemann_sender.py $source_location/locust_riemann_sender.py
+    curl -sSf -o ~/nginx_riemann_sender.py $source_location/nginx_riemann_sender.py
 
     # Autoscaler ready synchronization flag!
     ss-display "Waiting for Riemann to be ready."
     ss-get --timeout 600 autoscaler_ready
 
-    chmod +x ~/locust_riemann_sender.py
-    ~/locust_riemann_sender.py $riemann_host:$riemann_port &
+    chmod +x ~/nginx_riemann_sender.py
+    ~/nginx_riemann_sender.py $riemann_host:$riemann_port &
 }
 
 
