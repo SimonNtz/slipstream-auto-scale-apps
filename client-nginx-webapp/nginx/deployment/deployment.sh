@@ -13,6 +13,7 @@ deploy_and_run_riemann_client() {
     # Due to https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=835688
     pip install protobuf==3.1.0
     pip install riemann-client==6.3.0
+    source_location=${source_root}/client/app
 
     curl -sSf -o ~/nginx_riemann_sender.py $source_location/nginx_riemann_sender.py
 
