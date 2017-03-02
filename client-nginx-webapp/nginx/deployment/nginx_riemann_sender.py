@@ -14,11 +14,25 @@ sleep_t = 5
 
 resource = '/load'
 host_name = 'httpclient'
+access_log = "var/log/nginx/access.log"
 tags = ['webapp']
 
 resource_metric_names = {resource: ['avg_response_time', 'current_rps']}
 global_metric_names = ['user_count', 'fail_ratio']
 
+
+def follow(the_file):
+    """
+    Follow a given file and yield new lines when they are available, like `tail -f`.
+    """
+    with open(the_file) as f:
+        f.seek(0, 2)  # seek to eof
+        while True:
+            line = f.readline()
+            if not line:
+                time.sleep(0.1)  # sleep briefly before trying again
+                continue
+            yield line
 
 def merge_dicts(*dict_args):
     '''
@@ -113,13 +127,13 @@ def publish(resources, stats, client):
     publish_events(build_global_events(stats), client)
 
 
-def publish_to_riemann(resources, ip, port=riemann_port, locust=locust_stats_url):
+def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
     t = TCPTransport(ip, port)
     connect(t)
     try:
         with riemann_client.client.Client(t) as client:
             while True:
-                stats = get_stats(locust)
+                stats = follow(locust)
                 try:
                     publish(resources, stats, client)
                     time.sleep(sleep_t)
