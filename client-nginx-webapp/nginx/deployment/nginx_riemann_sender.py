@@ -133,13 +133,14 @@ def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
     try:
         with riemann_client.client.Client(t) as client:
             while True:
-                stats = follow(locust)
-                print stats
-                try:
-                    publish(resources, stats, client)
-                    time.sleep(sleep_t)
-                except (socket.error, struct.error) as ex:
-                    reconnect(client.transport)
+                for line in follow(locust):
+                    "post-processing the line"
+                    stats = str.split(line)[-1]
+                    try:
+                        publish(resources, stats, client)
+                        time.sleep(sleep_t)
+                    except (socket.error, struct.error) as ex:
+                        reconnect(client.transport)
     finally:
         t.disconnect()
 
