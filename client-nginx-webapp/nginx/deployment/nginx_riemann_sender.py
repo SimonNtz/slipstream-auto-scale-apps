@@ -14,7 +14,7 @@ sleep_t = 5
 
 resource = '/load'
 host_name = 'httpclient'
-access_log = "var/log/nginx/access.log"
+access_log = "/var/log/nginx/access.log"
 tags = ['webapp']
 
 resource_metric_names = {resource: ['avg_response_time', 'current_rps']}
@@ -134,6 +134,7 @@ def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
         with riemann_client.client.Client(t) as client:
             while True:
                 stats = follow(locust)
+                print stats
                 try:
                     publish(resources, stats, client)
                     time.sleep(sleep_t)
