@@ -35,20 +35,16 @@
 ;; Scaling streams.
 (def mtw-sec 30)
 (let [index (default :ttl 60 (index))]
-(streams
-  index
-  ...
-  #(info "received event" %)))
-  ;(streams
+  (streams
 
-    ;index
+    index
 
-    ;(where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
-    ;       (moving-time-window mtw-sec
-    ;                           (fn [events]
-    ;                             (let [mean (:metric (riemann.folds/mean events))]
-    ;                              (info "Average over sliding" mtw-sec "sec window:" mean)
-    ;                               (ss/cond-scale mean cmp)))))
+    (where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
+           (moving-time-window mtw-sec
+                               (fn [events]
+                                 (let [mean (:metric (riemann.folds/mean events))]
+                                   (info "Average over sliding" mtw-sec "sec window:" (riemann.folds/product mean) "ms")
+                                   (ss/cond-scale mean cmp)))))
 
-    ;(expired
-    ;  #(info "expired" %))))
+    (expired
+      #(info "expired" %))))

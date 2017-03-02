@@ -9,7 +9,6 @@ import riemann_client.client
 from riemann_client.transport import TCPTransport
 
 riemann_port = '5555'
-locust_stats_url = 'http://localhost:8089/stats/requests'
 sleep_t = 5
 
 resource = '/load'
@@ -83,7 +82,7 @@ def with_event_base(events_data):
 
 
 def resource_specific_events(rstats, resource):
-    return map(lambda m_name: {'metric_f': rstats.get(m_name), 'service': m_name},
+    return map(lambda m_name: {'metric_f': float(rstats), 'service': m_name},
                resource_metric_names[resource])
 
 
@@ -92,16 +91,16 @@ def events_from_resource_stats(rstats, resource):
 
 
 def build_resource_events(resource, stats):
-    for s in stats['stats']:
-        if resource == s.get('name', ''):
-            return events_from_resource_stats(s, resource)
-    return []
+    #for s in stats['stats']:
+    #    if resource == s.get('name', ''):
+    return events_from_resource_stats(stats, resource)
+    #return []
 
 
 def global_specific_events(stats):
     if not stats:
         return []
-    return map(lambda m_name: {'metric_f': stats.get(m_name), 'service': m_name},
+    return map(lambda m_name: {'metric_f': float(stats), 'service': m_name},
                global_metric_names)
 
 
@@ -110,6 +109,7 @@ def build_global_events(stats):
 
 
 def publish_events(events, client):
+    print(events)
     for event in events:
         try:
             client.event(**event)
@@ -123,7 +123,7 @@ def publish_events(events, client):
 
 def publish(resources, stats, client):
     for r in resources:
-        publish_events(build_resource_events(r, stats), client)
+        publish_events(	build_resource_events(r, stats), client)
     publish_events(build_global_events(stats), client)
 
 
@@ -153,8 +153,7 @@ def main():
     ip_port = sys.argv[1].split(':')
     ip = ip_port[0]
     port = len(ip_port) == 2 and ip_port[1] or riemann_port
-    locust = nargs > 2 and sys.argv[2] or locust_stats_url
-    publish_to_riemann([resource], ip, port, locust)
+    publish_to_riemann([resource], ip, port)
 
 
 if __name__ == '__main__':
