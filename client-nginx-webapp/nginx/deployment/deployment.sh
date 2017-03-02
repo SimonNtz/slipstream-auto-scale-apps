@@ -5,16 +5,14 @@ set -x
 riemann_host=`ss-get autoscaler_hostname`
 riemann_port=5555
 
-deploy_and_run_logshipper(){
 
-}
 
 deploy_and_run_riemann_client() {
     yum install -y python-pip python-devel gcc zeromq-devel
     pip install --upgrade pip
     pip install pyzmq
     pip install --upgrade six
-    
+
     # Due to https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=835688
     pip install protobuf==3.1.0
     pip install riemann-client==6.3.0
