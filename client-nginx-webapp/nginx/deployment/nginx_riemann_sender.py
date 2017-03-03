@@ -19,6 +19,7 @@ tags = ['webapp']
 resource_metric_names = {resource: ['avg_response_time', 'current_rps']}
 global_metric_names = ['user_count', 'fail_ratio']
 
+global_stats = {"stats_avg": 0, "request_count": 0}
 
 def follow(the_file):
     """
@@ -35,6 +36,11 @@ def follow(the_file):
 
 def get_stats_format(line):
     return(int(float(str.split(line)[-1]) * 1000)) #extract upstream time in ms
+
+def get_stats_average(line):
+    global_stats['stats_avg'] += get_stats_format(line)
+    global_stats['request_count'] += 1
+    return(global_stats['stats_avg']/global_stats['request_count'])
 
 def merge_dicts(*dict_args):
     '''
@@ -138,7 +144,7 @@ def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
             while True:
                 for line in follow(locust):
                     try:
-                        publish(resources, get_stats_format(line), client)
+                        publish(resources, get_stats_average(line), client)
                         time.sleep(sleep_t)
                     except (socket.error, struct.error) as ex:
                         reconnect(client.transport)

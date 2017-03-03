@@ -42,7 +42,7 @@
     (where (and (tagged ss/*service-tags*) (service (:service-metric-re cmp)))
            (moving-time-window mtw-sec
                                (fn [events]
-                                 (let [mean (:metric (riemann.streams/mean-over-time events))]
+                                 (let [mean (:metric (riemann.folds/mean events))]
                                    (info "Average over sliding" mtw-sec "sec window:"  mean "ms")
                                    (ss/cond-scale mean cmp)))))
 
