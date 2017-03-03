@@ -33,8 +33,8 @@ def follow(the_file):
                 continue
             yield line
 
-def get_stats_formats(stats):
-    return(int(float(str.split(line)[-1]) * 1000))
+def get_stats_format(line):
+    return(int(float(str.split(line)[-1]) * 1000)) #extract upstream time in ms
 
 def merge_dicts(*dict_args):
     '''
@@ -138,7 +138,7 @@ def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
             while True:
                 for line in follow(locust):
                     try:
-                        publish(resources, get_stats_format(stats), client)
+                        publish(resources, get_stats_format(line), client)
                         time.sleep(sleep_t)
                     except (socket.error, struct.error) as ex:
                         reconnect(client.transport)
