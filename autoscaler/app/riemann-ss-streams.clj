@@ -45,6 +45,6 @@
                                  (let [mean (:metric (riemann.folds/mean events))]
                                    (info "Average over sliding" mtw-sec "sec window:"  mean "ms")
                                    (ss/cond-scale mean cmp)))))
-
+                                   
     (expired
       #(info "expired" %))))

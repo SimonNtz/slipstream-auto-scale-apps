@@ -33,6 +33,9 @@ def follow(the_file):
                 continue
             yield line
 
+def get_stats_formats(stats):
+    return(int(float(str.split(line)[-1]) * 1000))
+
 def merge_dicts(*dict_args):
     '''
     Given any number of dicts, shallow copy and merge into a new dict,
@@ -82,7 +85,7 @@ def with_event_base(events_data):
 
 
 def resource_specific_events(rstats, resource):
-    return map(lambda m_name: {'metric_f': float(rstats), 'service': m_name},
+    return map(lambda m_name: {'metric_f': rstats, 'service': m_name},
                resource_metric_names[resource])
 
 
@@ -100,7 +103,7 @@ def build_resource_events(resource, stats):
 def global_specific_events(stats):
     if not stats:
         return []
-    return map(lambda m_name: {'metric_f': float(stats), 'service': m_name},
+    return map(lambda m_name: {'metric_f': stats, 'service': m_name},
                global_metric_names)
 
 
@@ -134,10 +137,8 @@ def publish_to_riemann(resources, ip, port=riemann_port, locust=access_log):
         with riemann_client.client.Client(t) as client:
             while True:
                 for line in follow(locust):
-                    "post-processing the line"
-                    stats = str.split(line)[-1]
                     try:
-                        publish(resources, stats, client)
+                        publish(resources, get_stats_format(stats), client)
                         time.sleep(sleep_t)
                     except (socket.error, struct.error) as ex:
                         reconnect(client.transport)
