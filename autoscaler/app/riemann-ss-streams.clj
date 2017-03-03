@@ -43,7 +43,7 @@
            (moving-time-window mtw-sec
                                (fn [events]
                                  (let [mean (:metric (riemann.folds/mean events))]
-                                   (info "Average over sliding" mtw-sec "sec window:" (riemann.folds/product 1000 mean) "ms")
+                                   (info "Average over sliding" mtw-sec "sec window:" (* 1000 mean) "ms")
                                    (ss/cond-scale mean cmp)))))
 
     (expired
