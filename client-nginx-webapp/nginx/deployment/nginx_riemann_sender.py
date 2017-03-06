@@ -38,9 +38,9 @@ def get_stats_format(line):
     return(int(float(str.split(line)[-1]) * 1000)) #extract upstream time in ms
 
 def get_stats_average(line):
-    temp = global_stats['stats_avg']
-    global_stats['stats_avg'] = get_stats_format(line)
-    return((global_stats['stats_avg'] + temp )/2)
+    temp = global_stats['stats_avg'] + get_stats_format(line)
+    global_stats['stats_avg'] = temp/2
+    return(global_stats['stats_avg'])
 
 def merge_dicts(*dict_args):
     '''
