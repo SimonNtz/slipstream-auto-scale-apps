@@ -8,7 +8,6 @@
     [clojure.data.json :as json]
     [clojure.tools.logging :as log]
 
-    [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
     [ring.middleware.json :refer [wrap-json-params]]
     [aleph.http :as http]
 
@@ -112,26 +111,5 @@
 
            (route/not-found {:status 404 :body "Not found"}))
 
-(defn wrap-cross-origin [handler]
-  (fn [request]
-    (handler request)))
-
-(def app
-  (-> app-routes
-      (wrap-defaults (assoc site-defaults :security (assoc (:security site-defaults) :anti-forgery false)))
-      (wrap-cross-origin)
-      ))
-
-(defn start
-  [port]
-  (let [s (http/start-server app {:port port})
-        _ (log/info "Started server on" port)]
-    (fn [] (.close s))))
-
-(defn stop
-  "Stops the application server by calling the function that was
-   created when the application server was started."
-  [stop-fn]
-  (try
-    (and stop-fn (stop-fn))
-    (catch Exception e (log/error (.getMessage e)))))
+(defn init []
+  [app-routes nil])

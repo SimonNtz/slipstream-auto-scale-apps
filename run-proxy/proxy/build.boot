@@ -1,11 +1,11 @@
-(def +version+ "3.17-SNAPSHOT")
+(def +version+ "3.24-SNAPSHOT")
 
 (set-env!
   :project 'com.sixsq.slipstream/SlipStreamRunProxyServer-jar
   :version +version+
   :edition "community"
 
-  :dependencies '[[org.clojure/clojure "1.8.0"]
+  :dependencies '[[org.clojure/clojure "1.9.0-alpha14"]
                   [org.martinklepsch/boot-gzip "0.1.2"]
                   [sixsq/build-utils "0.1.4" :scope "test"]])
 
@@ -25,6 +25,7 @@
 
                     [clj-http]
 
+                    [com.sixsq.slipstream/slipstream-ring-container nil :scope "test"]
                     [com.sixsq.slipstream/SlipStreamClientAPI-jar]
 
                     [compojure]
@@ -44,7 +45,7 @@
   '[tolitius.boot-check :refer [with-yagni with-eastwood with-kibit with-bikeshed]])
 
 (set-env!
-  :source-paths #{"dev-resources" "test"}
+  :source-paths #{"test-resources" "test"}
   :resource-paths #{"src" "resources"})
 
 (task-options!
@@ -103,4 +104,3 @@
          (comp
            (mvn-build)
            (push :repo "sixsq")))
-
